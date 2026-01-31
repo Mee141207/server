@@ -48,7 +48,7 @@ const db = mysql.createPool({
   host: process.env.MYSQL_HOST,
   user: process.env.MYSQLUSER,
   password: process.env.MYSQLPASSWORD,
-  database: process.env.MYSQL_DATABASE,
+  database: process.env.MYSQLDATABASE,
   port: Number(process.env.MYSQLPORT),
   waitForConnections: true,
   connectionLimit: 5,
@@ -208,3 +208,4 @@ app.get("/student", (req, res) => {
 app.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
 });
+
