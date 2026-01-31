@@ -1,7 +1,7 @@
 {
   "name": "hp",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "admin.js",
   "dependencies": {
     "accepts": "^2.0.0",
     "aws-ssl-profiles": "^1.1.2",
