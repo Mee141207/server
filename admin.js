@@ -38,9 +38,7 @@ const storage = multer.diskStorage({
     cb(null, uuidv4() + ext);
   }
 });
-const upload = multer({ storage });
-
-const db = mysql.createConnection({
+const db = mysql.createPool({
   host: process.env.MYSQL_HOST,
   user: process.env.MYSQLUSER,
   password: process.env.MYSQLPASSWORD,
@@ -49,11 +47,16 @@ const db = mysql.createConnection({
   ssl: { rejectUnauthorized: false }
 });
 
+(async () => {
+  try {
+    await db.query("SELECT 1");
+    console.log("✅ Connected to MySQL.");
+  } catch (err) {
+    console.error("❌ DB error:", err);
+  }
+})();
 
-db.connect((err) => {
-  if (err) console.error('❌ DB error:', err);
-  else console.log('✅ Connected to MySQL.');
-});
+
 app.post("/adminlogin", async (req, res) => {
   const { busid, password } = req.body;
 
@@ -133,7 +136,7 @@ app.post("/upload-schedule", upload.single("pdf"), (req, res) => {
 
   try {
     const originalName = req.file.originalname; 
-    const destPath = path.join(uploadDir, originalName);
+    const destPath = path.join(uploadDir, uuidv4() + path.extname(originalName));
 
     fs.renameSync(req.file.path, destPath);
 
@@ -175,6 +178,7 @@ app.get('/student', (req, res) => {
 app.listen(port, () => {
   console.log(`🚀 Server running at http://localhost:${port}`);
 });
+
 
 
 
