@@ -42,7 +42,7 @@ const upload = multer({ storage });
 
 const db = mysql.createConnection({
   host: process.env.MYSQL_HOST,
-  user: process.env.MYSQL_USER,
+  user: process.env.MYSQLUSER,
   password: process.env.MYSQL_PASSWORD,
   database: process.env.MYSQL_DATABASE,
   port: process.env.MYSQL_PORT
@@ -183,4 +183,5 @@ app.get('/student', (req, res) => {
 app.listen(port, () => {
   console.log(`🚀 Server running at http://localhost:${port}`);
 });
+
 
