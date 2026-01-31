@@ -1,7 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const mysql = require('mysql');
+const mysql = require("mysql2/promise");
 const path = require('path');
 const fs = require("fs");
 const app = express();
@@ -45,7 +45,8 @@ const db = mysql.createConnection({
   user: process.env.MYSQLUSER,
   password: process.env.MYSQLPASSWORD,
   database: process.env.MYSQL_DATABASE,
-  port: process.env.MYSQLPORT
+  port: Number(process.env.MYSQLPORT),
+  ssl: { rejectUnauthorized: false }
 });
 
 
@@ -53,87 +54,78 @@ db.connect((err) => {
   if (err) console.error('❌ DB error:', err);
   else console.log('✅ Connected to MySQL.');
 });
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'userroles.html'));
-});
-
-app.post('/adminlogin', (req, res) => {
-  const { busid, password } = req.body;
-  db.query(
-    'SELECT * FROM adminn WHERE busid = ? AND password = ?',
-    [busid, password],
-    (err, results) => {
-      if (err) return res.status(500).json({ message: 'Database error' });
-      if (results.length > 0) {
-        req.session.user = { role: "admin", busid };  
-        res.json({ message: 'Login successful', redirect: '/admin dashboard.html' });
-      } else {
-        res.json({ message: 'Invalid bus ID or password' });
-      }
-    }
-  );
-});
-app.post('/adminregister', (req, res) => {
+app.post("/adminlogin", async (req, res) => {
   const { busid, password } = req.body;
 
-  if (!busid || !password) {
-    return res.status(400).json({ message: 'Missing busid or password' });
-  }
-
-  db.query('SELECT * FROM adminn WHERE busid = ?', [busid], (err, result) => {
-    if (err) return res.status(500).json({ message: 'Database error' });
-    if (result.length > 0) {
-      return res.json({ message: 'Admin already exists' });
-    }
-    db.query(
-      'INSERT INTO adminn (busid, password) VALUES (?, ?)',
-      [busid, password],
-      (err2) => {
-        if (err2) return res.status(500).json({ message: 'Error creating admin' });
-
-        req.session.user = { role: "admin", busid };
-        res.json({ message: 'Admin registered successfully', redirect: '/admin dashboard.html' });
-      }
+  try {
+    const [rows] = await db.query(
+      "SELECT * FROM adminn WHERE busid=? AND password=?",
+      [busid, password]
     );
-  });
-});
 
-app.post('/studentlogin', (req, res) => {
-  const { busid, password } = req.body;
-  db.query(
-    'SELECT * FROM logiin WHERE busid = ? AND password = ?',
-    [busid, password],
-    (err, results) => {
-      if (err) return res.status(500).json({ message: 'Database error' });
-      if (results.length > 0) {
-        req.session.user = { role: "student", busid };  
-        res.json({ message: 'Login successful', redirect: '/home.html' });
-      } else {
-        res.json({ message: 'User not found sign up first' });
-      }
+    if (rows.length > 0) {
+      req.session.user = { role: "admin", busid };
+      res.json({ success: true });
+    } else {
+      res.json({ success: false, message: "Invalid Admin credentials" });
     }
-  );
-});
-app.post('/studentregister', (req, res) => {
-  const { busid, password } = req.body;
-
-  if (!busid || !password) {
-    return res.status(400).json({ message: 'Missing busid or password' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false });
   }
-
-  db.query('SELECT * FROM logiin WHERE busid = ?',[busid], (err, result) => {
-    if (err) return res.status(500).json({ message: 'Database error' });
-    if (result.length > 0) {
-      return res.json({ message: 'Username already exists' });
-    }
-  
-    db.query('INSERT INTO logiin (busid, password) VALUES (?, ?)', [busid, password], (err2) => {
-          if (err2) return res.status(500).json({ message: 'Error creating user' });
-      res.json({ message: 'User registered successfully', redirect: '/home.html' });
-    });
-  });
 });
+
+app.post("/adminregister", async (req, res) => {
+  const { busid, password } = req.body;
+
+  try {
+    await db.query(
+      "INSERT INTO adminn (busid, password) VALUES (?,?)",
+      [busid, password]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.json({ success: false, message: "Admin already exists" });
+  }
+});
+
+app.post("/studentlogin", async (req, res) => {
+  const { busid, password } = req.body;
+
+  try {
+    const [rows] = await db.query(
+      "SELECT * FROM logiin WHERE busid=? AND password=?",
+      [busid, password]
+    );
+
+    if (rows.length > 0) {
+      req.session.user = { role: "student", busid };
+      res.json({ success: true });
+    } else {
+      res.json({ success: false, message: "Student not found" });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false });
+  }
+});
+
+app.post("/studentregister", async (req, res) => {
+  const { busid, password } = req.body;
+
+  try {
+    await db.query(
+      "INSERT INTO logiin (busid, password) VALUES (?,?)",
+      [busid, password]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.json({ success: false, message: "Student exists" });
+  }
+});
+
 let lastUploaded = null;
 
 app.post("/upload-schedule", upload.single("pdf"), (req, res) => {
@@ -183,6 +175,7 @@ app.get('/student', (req, res) => {
 app.listen(port, () => {
   console.log(`🚀 Server running at http://localhost:${port}`);
 });
+
 
 
 
