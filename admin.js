@@ -45,29 +45,29 @@ const upload = multer({ storage });
 
 /* ---------- MYSQL (RAILWAY) ---------- */
 const mysql = require("mysql2/promise");
+const mysql = require("mysql2/promise");
 
 const pool = mysql.createPool({
   host: process.env.MYSQLHOST,
   user: process.env.MYSQLUSER,
   password: process.env.MYSQLPASSWORD,
-  database: process.env.MYSQL_DATABASE,
+  database: process.env.MYSQLDATABASE, // 👈 THIS WAS THE BUG
   port: Number(process.env.MYSQLPORT),
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0,
 });
 
-module.exports = pool;
-
-/* -------- TEST DB ---------- */
 (async () => {
   try {
-    await db.query("SELECT 1");
-    console.log("✅ Railway MySQL Connected");
+    const conn = await pool.getConnection();
+    console.log("✅ MySQL connected successfully");
+    conn.release();
   } catch (err) {
     console.error("❌ DB Connection Failed:", err.message);
+    process.exit(1);
   }
 })();
+
 
 /* ---------- ROUTES ---------- */
 
@@ -212,6 +212,7 @@ app.get("/student", (req, res) => {
 app.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
 });
+
 
 
 
