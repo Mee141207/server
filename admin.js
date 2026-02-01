@@ -46,16 +46,14 @@ const upload = multer({ storage });
 /* ---------- MYSQL (RAILWAY) ---------- */
 const db = mysql.createPool({
   host: process.env.MYSQL_HOST,
-  user: process.env.MYSQLUSER,
-  password: process.env.MYSQLPASSWORD,
-  database: process.env.MYSQLDATABASE,
-  port: Number(process.env.MYSQLPORT),
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DATABASE,
+  port: Number(process.env.MYSQL_PORT),
   waitForConnections: true,
-  connectionLimit: 5,
-  ssl: { rejectUnauthorized: false }
+  connectionLimit: 5
 });
-
-/* ---------- TEST DB ---------- */
+/* -------- TEST DB ---------- */
 (async () => {
   try {
     await db.query("SELECT 1");
@@ -208,4 +206,5 @@ app.get("/student", (req, res) => {
 app.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
 });
+
 
