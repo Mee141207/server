@@ -15,6 +15,7 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static("public"));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use(
   session({
@@ -23,12 +24,6 @@ app.use(
     saveUninitialized: false
   })
 );
-
-/* ---------- AUTH MIDDLEWARE ---------- */
-function requireLogin(req, res, next) {
-  if (req.session && req.session.user) return next();
-  return res.status(401).send("You must be logged in");
-}
 
 /* ---------- UPLOAD SETUP ---------- */
 const uploadDir = path.join(__dirname, "uploads");
@@ -42,6 +37,8 @@ const storage = multer.diskStorage({
   }
 });
 const upload = multer({ storage });
+
+/* ---------- MYSQL ---------- */
 let db;
 
 async function connectDB() {
@@ -60,14 +57,12 @@ async function connectDB() {
     console.log("✅ MySQL Connected Successfully");
   } catch (err) {
     console.error("❌ DB Connection Failed:");
-    console.error(err);
-    process.exit(1); // stop restart loop
+    console.error(err.message);
+    process.exit(1);
   }
 }
 
-connectDB();
-
-
+/* ---------- ROUTES ---------- */
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "userroles.html"));
 });
@@ -88,7 +83,7 @@ app.post("/adminlogin", async (req, res) => {
     } else {
       res.json({ message: "Invalid bus ID or password" });
     }
-  } catch (err) {
+  } catch {
     res.status(500).json({ message: "Database error" });
   }
 });
@@ -115,7 +110,7 @@ app.post("/adminregister", async (req, res) => {
 
     req.session.user = { role: "admin", busid };
     res.json({ message: "Admin registered", redirect: "/admindashboard.html" });
-  } catch (err) {
+  } catch {
     res.status(500).json({ message: "Database error" });
   }
 });
@@ -136,7 +131,7 @@ app.post("/studentlogin", async (req, res) => {
     } else {
       res.json({ message: "User not found, sign up first" });
     }
-  } catch (err) {
+  } catch {
     res.status(500).json({ message: "Database error" });
   }
 });
@@ -162,7 +157,7 @@ app.post("/studentregister", async (req, res) => {
     );
 
     res.json({ message: "User registered", redirect: "/home.html" });
-  } catch (err) {
+  } catch {
     res.status(500).json({ message: "Database error" });
   }
 });
@@ -173,19 +168,14 @@ let lastUploaded = null;
 app.post("/upload-schedule", upload.single("pdf"), (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-  const originalName = req.file.originalname;
-  const destPath = path.join(uploadDir, originalName);
-
-  fs.renameSync(req.file.path, destPath);
-
   lastUploaded = {
-    stored: originalName,
-    original: originalName
+    stored: req.file.filename,
+    original: req.file.originalname
   };
 
   res.json({
     message: "✅ Upload successful",
-    file: `/uploads/${originalName}`
+    file: `/uploads/${req.file.filename}`
   });
 });
 
@@ -194,25 +184,13 @@ app.get("/download-schedule", (req, res) => {
   if (!lastUploaded) return res.status(404).send("No file uploaded");
 
   const filePath = path.join(uploadDir, lastUploaded.stored);
-  if (!fs.existsSync(filePath))
-    return res.status(404).send("File not found");
-
   res.download(filePath, lastUploaded.original);
 });
 
-/* ---------- STUDENT PAGE ---------- */
-app.get("/student", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "student.html"));
-});
-
-/* ---------- START SERVER ---------- */
-app.listen(port, () => {
-  console.log(`🚀 Server running on port ${port}`);
-});
-
-
-
-
-
-
-
+/* ---------- START SERVER AFTER DB ---------- */
+(async () => {
+  await connectDB();
+  app.listen(port, () => {
+    console.log(`🚀 Server running on port ${port}`);
+  });
+})();
