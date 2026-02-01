@@ -42,24 +42,31 @@ const storage = multer.diskStorage({
   }
 });
 const upload = multer({ storage });
+let db;
 
-/* ---------- MYSQL (RAILWAY) ---------- */
-try {
-  const connection = await mysql.createConnection({
-    host: process.env.MYSQLHOST,
-    user: process.env.MYSQLUSER,
-    password: process.env.MYSQLPASSWORD,
-    database: process.env.MYSQLDATABASE,
-    port: process.env.MYSQLPORT
-  });
+async function connectDB() {
+  try {
+    db = await mysql.createPool({
+      host: process.env.MYSQLHOST,
+      user: process.env.MYSQLUSER,
+      password: process.env.MYSQLPASSWORD,
+      database: process.env.MYSQLDATABASE,
+      port: process.env.MYSQLPORT,
+      waitForConnections: true,
+      connectionLimit: 10
+    });
 
-  console.log("✅ MySQL Connected Successfully");
-} catch (err) {
-  console.error("❌ DB Connection Failed:");
-  console.error(err.message);
+    await db.query("SELECT 1");
+    console.log("✅ MySQL Connected Successfully");
+  } catch (err) {
+    console.error("❌ DB Connection Failed:");
+    console.error(err);
+    process.exit(1); // stop restart loop
+  }
 }
 
-/* ---------- ROUTES ---------- */
+connectDB();
+
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "userroles.html"));
@@ -202,6 +209,7 @@ app.get("/student", (req, res) => {
 app.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
 });
+
 
 
 
