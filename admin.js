@@ -44,15 +44,21 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 /* ---------- MYSQL (RAILWAY) ---------- */
-const db = mysql.createPool({
+const mysql = require("mysql2/promise");
+
+const pool = mysql.createPool({
   host: process.env.MYSQLHOST,
   user: process.env.MYSQLUSER,
   password: process.env.MYSQLPASSWORD,
   database: process.env.MYSQL_DATABASE,
   port: Number(process.env.MYSQLPORT),
   waitForConnections: true,
-  connectionLimit: 5
+  connectionLimit: 10,
+  queueLimit: 0,
 });
+
+module.exports = pool;
+
 /* -------- TEST DB ---------- */
 (async () => {
   try {
@@ -206,6 +212,7 @@ app.get("/student", (req, res) => {
 app.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
 });
+
 
 
 
