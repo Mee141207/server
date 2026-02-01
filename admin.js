@@ -44,30 +44,20 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 /* ---------- MYSQL (RAILWAY) ---------- */
-const mysql = require("mysql2/promise");
-const mysql = require("mysql2/promise");
+try {
+  const connection = await mysql.createConnection({
+    host: process.env.MYSQLHOST,
+    user: process.env.MYSQLUSER,
+    password: process.env.MYSQLPASSWORD,
+    database: process.env.MYSQLDATABASE,
+    port: process.env.MYSQLPORT
+  });
 
-const pool = mysql.createPool({
-  host: process.env.MYSQLHOST,
-  user: process.env.MYSQLUSER,
-  password: process.env.MYSQLPASSWORD,
-  database: process.env.MYSQLDATABASE, // 👈 THIS WAS THE BUG
-  port: Number(process.env.MYSQLPORT),
-  waitForConnections: true,
-  connectionLimit: 10,
-});
-
-(async () => {
-  try {
-    const conn = await pool.getConnection();
-    console.log("✅ MySQL connected successfully");
-    conn.release();
-  } catch (err) {
-    console.error("❌ DB Connection Failed:", err.message);
-    process.exit(1);
-  }
-})();
-
+  console.log("✅ MySQL Connected Successfully");
+} catch (err) {
+  console.error("❌ DB Connection Failed:");
+  console.error(err.message);
+}
 
 /* ---------- ROUTES ---------- */
 
@@ -212,6 +202,7 @@ app.get("/student", (req, res) => {
 app.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
 });
+
 
 
 
